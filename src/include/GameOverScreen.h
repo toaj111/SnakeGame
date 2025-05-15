@@ -1,5 +1,4 @@
-#ifndef GAME_OVER_SCREEN_H
-#define GAME_OVER_SCREEN_H
+#pragma once
 
 #include <SFML/Graphics.hpp>
 
@@ -21,7 +20,8 @@ private:
 	sf::Text text_;
 
 	unsigned score_;
+
+	// 打开设置界面的按钮
+	sf::RectangleShape setting_button_;
 };
 }
-
-#endif

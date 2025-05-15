@@ -1,6 +1,4 @@
-#ifndef GAME_SCREEN_H
-#define GAME_SCREEN_H
-
+#pragma once
 #include <SFML/Graphics.hpp>
 
 #include "Screen.h"
@@ -26,4 +24,3 @@ private:
 };
 }
 
-#endif

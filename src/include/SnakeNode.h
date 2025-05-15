@@ -1,5 +1,4 @@
-#ifndef SNAKE_NODE_H
-#define SNAKE_NODE_H
+#pragma once
 
 #include <SFML/Graphics.hpp>
 
@@ -10,23 +9,22 @@ class SnakeNode
 public:
 	SnakeNode(sf::Vector2f position = sf::Vector2f(0, 0));
 
-	void setPosition(sf::Vector2f position);
-	void setPosition(float x, float y);
+	virtual void setPosition(sf::Vector2f position) = 0;
+	virtual void setPosition(float x, float y) = 0;
 
-	void move(float xOffset, float yOffset);
+	virtual void move(float xOffset, float yOffset) = 0;
 
-	void render(sf::RenderWindow& window);
+	virtual void render(sf::RenderWindow& window) = 0;
 
-	sf::Vector2f getPosition() const;
-	sf::FloatRect getBounds() const;
+	virtual sf::Vector2f getPosition() const = 0;
+	virtual sf::FloatRect getBounds() const = 0;
 
-	static const float Width;
-	static const float Height;
+	virtual float getRotation() const = 0;
 
-private:
-	sf::RectangleShape shape_;
+	static const float Radius;
+
+protected:
 	sf::Vector2f position_;
 };
 }
 
-#endif

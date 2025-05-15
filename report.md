@@ -15,7 +15,28 @@
     offset snake
     单位长度
 
-    	float offset_x_;
+    float offset_x_;
 	float offset_y_;
 
+    允许蛇头穿过自身
+
+    删除不必要的变量
 - snake node
+
+
+game
+存储多个screen
+
+
+game_screen:
+- state: pause
+
+
+context结构，保存上下文
+
+游戏画面的切换应该由game来切换
+
+
+实时存储得分
+
+- 重写hitSelf碰撞判断，避免过于敏感。

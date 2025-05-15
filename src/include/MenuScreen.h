@@ -20,6 +20,9 @@ private:
 	sf::Font font_;
 	sf::Text snakeText_;
 	sf::Text text_;
+
+	// 打开设置界面的按钮
+	sf::RectangleShape setting_button_;
 };
 }
 

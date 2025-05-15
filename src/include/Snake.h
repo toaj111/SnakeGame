@@ -11,11 +11,6 @@
 
 namespace sfSnake
 {
-	enum class Direction
-	{
-		Left, Right, Up, Down
-	};
-
 class Snake
 {
 public:
@@ -40,9 +35,6 @@ private:
 
 	bool hitSelf_;
 
-	sf::Vector2f position_;
-	// sf::Vector2f offset_;
-	Direction direction_;
 	float offset_x_;
 	float offset_y_;
 
@@ -52,9 +44,9 @@ private:
 	sf::SoundBuffer dieBuffer_;
 	sf::Sound dieSound_;
 
-	std::vector<SnakeNode> nodes_;
+	std::vector<std::unique_ptr<SnakeNode>> nodes_;
 	
-	float unit_distance_;
+	static const float UnitDistance;
 
 	static const int InitialSize;
 };

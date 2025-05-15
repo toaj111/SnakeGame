@@ -9,18 +9,21 @@
 #include "include/Fruit.h"
 #include "include/SnakeNode.h"
 #include "include/GameOverScreen.h"
+#include "include/SnakeHeadNode.h"
+#include "include/SnakeBodyNode.h"
 
 using namespace sfSnake;
 
 const int Snake::InitialSize = 5;
+const float Snake::UnitDistance = sqrt(8 * SnakeNode::Radius * SnakeNode::Radius);
 
-Snake::Snake() : direction_(Direction::Up), hitSelf_(false)
+float getDistance(const sf::Vector2f& a, const sf::Vector2f& b) {
+	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+};
+
+Snake::Snake() : hitSelf_(false), offset_x_(0), offset_y_(-UnitDistance)
 {
 	initNodes();
-
-	unit_distance_ = sqrt(SnakeNode::Width * SnakeNode::Width + SnakeNode::Height * SnakeNode::Height);
-	offset_x_ = 0;
-	offset_y_ = unit_distance_;
 
 	pickupBuffer_.loadFromFile("assets/sounds/pickup.aiff");
 	pickupSound_.setBuffer(pickupBuffer_);
@@ -33,11 +36,15 @@ Snake::Snake() : direction_(Direction::Up), hitSelf_(false)
 
 void Snake::initNodes()
 {
-	for (int i = 0; i < Snake::InitialSize; ++i)
+	nodes_.push_back(std::make_unique<SnakeHeadNode>(sf::Vector2f(
+		Game::Width / 2 - SnakeNode::Radius,
+		Game::Height / 2 - SnakeNode::Radius)));
+	
+	for (int i = 1; i < Snake::InitialSize; ++i)
 	{
-		nodes_.push_back(SnakeNode(sf::Vector2f(
-			Game::Width / 2 - SnakeNode::Width / 2,
-			Game::Height / 2 - (SnakeNode::Height / 2) + (SnakeNode::Height * i))));
+		nodes_.push_back(std::make_unique<SnakeBodyNode>(sf::Vector2f(
+			Game::Width / 2 - SnakeNode::Radius,
+			Game::Height / 2 - SnakeNode::Radius + (2 * SnakeNode::Radius * i))));
 	}
 }
 
@@ -45,31 +52,30 @@ void Snake::handleInput(sf::RenderWindow& window)
 {
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
 		offset_x_ = 0;
-		offset_y_ = unit_distance_;
+		offset_y_ = -UnitDistance;
 	}
 	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
 		offset_x_ = 0;
-		offset_y_ = -unit_distance_;
+		offset_y_ = UnitDistance;
 	}
 	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-		offset_x_ = -unit_distance_;
+		offset_x_ = -UnitDistance;
 		offset_y_ = 0;
 	}
 	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-		offset_x_ = unit_distance_;
+		offset_x_ = UnitDistance;
 		offset_y_ = 0;
 	}
 	
-	// TODO:处理鼠标输入
 	if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
 		auto mouse_pos = sf::Mouse::getPosition(window);
-		float dx = mouse_pos.x - position_.x;
-		float dy = mouse_pos.y - position_.y;
+		float dx = mouse_pos.x - nodes_[0]->getPosition().x;
+		float dy = mouse_pos.y - nodes_[0]->getPosition().y;
 
 		float dist = sqrt(dx * dx + dy * dy);
 
-		offset_x_ = dx * unit_distance_ / dist;
-		offset_y_ = dy * unit_distance_ / dist;
+		offset_x_ = dx * UnitDistance / dist;
+		offset_y_ = dy * UnitDistance / dist;
 	}
 	
 }
@@ -87,7 +93,7 @@ void Snake::checkFruitCollisions(std::vector<Fruit>& fruits)
 
 	for (auto it = fruits.begin(); it != fruits.end(); ++it)
 	{
-		if (it->getBounds().intersects(nodes_[0].getBounds()))
+		if (it->getBounds().intersects(nodes_[0]->getBounds()))
 			toRemove = it;
 	}
 
@@ -101,28 +107,18 @@ void Snake::checkFruitCollisions(std::vector<Fruit>& fruits)
 
 void Snake::grow()
 {
-	// switch (direction_)
-	// {
-	// case Direction::Up:
-	// 	nodes_.push_back(SnakeNode(sf::Vector2f(nodes_[nodes_.size() - 1].getPosition().x,
-	// 		nodes_[nodes_.size() - 1].getPosition().y + SnakeNode::Height)));
-	// 	break;
-	// case Direction::Down:
-	// 	nodes_.push_back(SnakeNode(sf::Vector2f(nodes_[nodes_.size() - 1].getPosition().x,
-	// 		nodes_[nodes_.size() - 1].getPosition().y - SnakeNode::Height)));
-	// 	break;
-	// case Direction::Left:
-	// 	nodes_.push_back(SnakeNode(sf::Vector2f(nodes_[nodes_.size() - 1].getPosition().x + SnakeNode::Width,
-	// 		nodes_[nodes_.size() - 1].getPosition().y)));
-	// 	break;
-	// case Direction::Right:
-	// 	nodes_.push_back(SnakeNode(sf::Vector2f(nodes_[nodes_.size() - 1].getPosition().x - SnakeNode::Width,
-	// 		nodes_[nodes_.size() - 1].getPosition().y)));
-	// 	break;
-	// }
-
-	// TODO:在snakeNode中存储每一块的方向
-	nodes_.push_back(SnakeNode(sf::Vector2f(nodes_[nodes_.size() - 1].getPosition().x - offset_x_, nodes_[nodes_.size() - 1].getPosition().y - offset_y_)));
+	auto prev_last_node_pos = nodes_[nodes_.size() - 1]->getPosition();
+	if (nodes_.size() == 1) {
+		auto last_node_pos = sf::Vector2f(prev_last_node_pos.x - offset_x_, prev_last_node_pos.y - offset_y_);
+		nodes_.push_back(std::make_unique<SnakeBodyNode>(last_node_pos, nodes_[0]->getRotation()));
+		return;
+	}
+	auto prev_second_last_node_pos = nodes_[nodes_.size() - 1]->getPosition();
+	float offset_x = prev_second_last_node_pos.x - prev_last_node_pos.x;
+	float offset_y = prev_second_last_node_pos.y - prev_last_node_pos.y;
+	auto last_node_pos = sf::Vector2f(prev_last_node_pos.x - offset_x, prev_last_node_pos.y - offset_y_);
+	
+	nodes_.push_back(std::make_unique<SnakeBodyNode>(last_node_pos, nodes_[nodes_.size() - 1]->getRotation()));
 }
 
 unsigned Snake::getSize() const
@@ -137,11 +133,11 @@ bool Snake::hitSelf() const
 
 void Snake::checkSelfCollisions()
 {
-	SnakeNode& headNode = nodes_[0];
-
+	auto& headNode = nodes_[0];
 	for (decltype(nodes_.size()) i = 1; i < nodes_.size(); ++i)
 	{
-		if (headNode.getBounds().intersects(nodes_[i].getBounds()))
+		
+		if (getDistance(headNode->getPosition(), nodes_[i]->getPosition()) < 0.5 * SnakeNode::Radius)
 		{
 			dieSound_.play();
 			sf::sleep(sf::seconds(dieBuffer_.getDuration().asSeconds()));
@@ -151,48 +147,33 @@ void Snake::checkSelfCollisions()
 }
 
 void Snake::checkEdgeCollisions()
-{
-	SnakeNode& headNode = nodes_[0];
-
-	if (headNode.getPosition().x <= 0)
-		headNode.setPosition(Game::Width, headNode.getPosition().y);
-	else if (headNode.getPosition().x >= Game::Width)
-		headNode.setPosition(0, headNode.getPosition().y);
-	else if (headNode.getPosition().y <= 0)
-		headNode.setPosition(headNode.getPosition().x, Game::Height);
-	else if (headNode.getPosition().y >= Game::Height)
-		headNode.setPosition(headNode.getPosition().x, 0);
+{	
+	auto& headNode = nodes_[0];
+	if (headNode->getPosition().x <= 0)
+		headNode->setPosition(Game::Width, headNode->getPosition().y);
+	else if (headNode->getPosition().x >= Game::Width)
+		nodes_[0]->setPosition(0, nodes_[0]->getPosition().y);
+	else if (headNode->getPosition().y <= 0)
+		headNode->setPosition(headNode->getPosition().x, Game::Height);
+	else if (headNode->getPosition().y >= Game::Height)
+		headNode->setPosition(headNode->getPosition().x, 0);
 }
 
 void Snake::move()
 {
 	for (decltype(nodes_.size()) i = nodes_.size() - 1; i > 0; --i)
 	{
-		nodes_[i].setPosition(nodes_.at(i - 1).getPosition());
+		auto offset_x = nodes_[i - 1]->getPosition().x - nodes_[i]->getPosition().x;
+		auto offset_y = nodes_[i - 1]->getPosition().y - nodes_[i]->getPosition().y;
+		nodes_[i]->move(offset_x, offset_y);
 	}
 
-	// switch (direction_)
-	// {
-	// case Direction::Up:
-	// 	nodes_[0].move(offset_x_, offset_y_);
-	// 	break;
-	// case Direction::Down:
-	// 	nodes_[0].move(0, unit_;
-	// 	break;
-	// case Direction::Left:
-	// 	nodes_[0].move(-unit_distance_, 0);
-	// 	break;
-	// case Direction::Right:
-	// 	nodes_[0].move(unit_distance_, 0);
-	// 	break;
-	// }
-
-	nodes_[0].move(offset_x_, offset_y_);
+	nodes_[0]->move(offset_x_, offset_y_);
 }
 
 void Snake::render(sf::RenderWindow& window)
 {
 	for (auto& node : nodes_)
-		node.render(window);
+		node->render(window);
 }
 

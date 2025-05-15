@@ -1,5 +1,4 @@
-#ifndef FRUIT_H
-#define FRUIT_H
+#pragma once
 
 #include <SFML/Graphics.hpp>
 
@@ -20,5 +19,3 @@ private:
 	static const float Radius;
 };
 }
-
-#endif
